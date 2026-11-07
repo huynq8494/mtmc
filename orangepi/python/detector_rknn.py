@@ -33,6 +33,31 @@ def letterbox(img, hw, color=114):
     return out, s, (left, top)
 
 
+def decode_head(outs, hw, conf):
+    """Decode the YOLOv8 raw head (3 x [1,65,h,w]: 64 DFL box logits + 1 person logit) in letterboxed pixels.
+    Returns xyxy (N,4) and scores (N,) for score > conf."""
+    boxes, scores = [], []
+    for o in outs:
+        o = np.asarray(o, np.float32)
+        _, c, h, w = o.shape
+        s = hw[0] // h
+        o = o.reshape(c, h * w)
+        sc = 1.0 / (1.0 + np.exp(-o[64]))
+        m = sc > conf
+        if not m.any():
+            continue
+        d = o[:64, m].reshape(4, 16, -1)
+        d = np.exp(d - d.max(1, keepdims=True))
+        d = ((d / d.sum(1, keepdims=True)) * np.arange(16, dtype=np.float32)[None, :, None]).sum(1)  # l,t,r,b in cells
+        idx = np.nonzero(m)[0]
+        gx, gy = (idx % w + 0.5).astype(np.float32), (idx // w + 0.5).astype(np.float32)
+        boxes.append(np.stack([(gx - d[0]) * s, (gy - d[1]) * s, (gx + d[2]) * s, (gy + d[3]) * s], 1))
+        scores.append(sc[m])
+    if not boxes:
+        return np.zeros((0, 4), np.float32), np.zeros(0, np.float32)
+    return np.concatenate(boxes), np.concatenate(scores)
+
+
 class RknnDetector:
     def __init__(self, yolo_path, reid_path, imgsz=(544, 960), conf=0.35, iou=0.45, cores=3):
         """imgsz = (H, W) of the exported YOLO model. cores = number of NPU cores used for YOLO (1..3)."""
@@ -49,14 +74,10 @@ class RknnDetector:
     def _detect(self, k, frame):
         img, s, (px, py) = letterbox(frame, self.hw)
         x = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)[None]                   # 1,H,W,3 uint8 (norm is inside the model)
-        out = self.yolo[k % len(self.yolo)].inference(inputs=[x], data_format=["nhwc"])[0]
-        p = np.asarray(out, np.float32).reshape(5, -1)                   # cx, cy, w, h, score
-        m = p[4] > self.conf
-        if not m.any():
+        outs = self.yolo[k % len(self.yolo)].inference(inputs=[x], data_format=["nhwc"])
+        xyxy, sc = decode_head(outs, self.hw, self.conf)
+        if len(sc) == 0:
             return np.zeros((0, 5), np.float32)
-        p = p[:, m]
-        cx, cy, w, h, sc = p
-        xyxy = np.stack([cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2], 1)
         keep = cv2.dnn.NMSBoxes([[a, b, c - a, d - b] for a, b, c, d in xyxy.tolist()], sc.tolist(), self.conf, self.iou)
         keep = np.asarray(keep, int).reshape(-1)
         b = xyxy[keep]

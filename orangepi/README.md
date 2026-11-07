@@ -16,12 +16,12 @@ Needs the project venv (torch, ultralytics) plus `rknn-toolkit2`, `onnx`, `onnxr
 Run from `mtmc/`.
 
 ```bash
-python orangepi/export/export_onnx.py                  # models/yolo11n_person.onnx (1x3x544x960 -> [1,5,10710]), models/osnet_x0_25.onnx (1x3x256x128 -> [1,512])
+python orangepi/export/export_onnx.py                  # models/yolov8n_person.onnx (YOLOv8n person-only raw head: 1x3x544x960 -> 3 x [1,65,h,w]; DFL decode + NMS run on the host), models/osnet_x0_25.onnx (1x3x256x128 -> [1,512])
 python orangepi/export/convert_rknn.py                 # FP16 (default, safest): models/*_fp16.rknn
 python orangepi/export/make_calib_dataset.py --n 150   # only for INT8: models/calib/*_list.txt
 python orangepi/export/convert_rknn.py --dtype int8    # models/*_int8.rknn   (or --dtype both)
 python orangepi/export/verify_rknn.py --kind osnet --rknn models/osnet_x0_25_fp16.rknn --image crop.jpg
-python orangepi/export/verify_rknn.py --kind yolo  --rknn models/yolo11n_person_fp16.rknn --image frame.jpg
+python orangepi/export/verify_rknn.py --kind yolo  --rknn models/yolov8n_person_fp16.rknn --image frame.jpg
 python orangepi/export/export_cameras.py               # configs/cameras.txt (for the C++ app)
 ```
 
@@ -41,7 +41,7 @@ Notes
 pip install -r orangepi/python/requirements-rknn.txt     # + the rknn-toolkit-lite2 wheel for your python
 python orangepi/python/main_rknn.py --check
 python orangepi/python/main_rknn.py --cams 1,7,8 --max-frames 50
-python orangepi/python/main_rknn.py --yolo models/yolo11n_person_int8.rknn --npu-cores 3
+python orangepi/python/main_rknn.py --yolo models/yolov8n_person_int8.rknn --npu-cores 3
 ```
 Output: `out_rknn.mp4`. The per-frame log shows YOLO and ReID ms. YOLO runs on up to 3 NPU cores in parallel.
 

@@ -81,17 +81,31 @@ void Detector::process(Worker& w, const cv::Mat& frame, std::vector<Det>& out) {
     std::vector<RknnOutput> outs;
     w.yolo.run(in.data, outs);
 
-    const RknnOutput& o = outs[0];
-    // expected [1,5,N] (channel-major); also accept [1,N,5]
-    bool channel_last = o.dims.size() == 3 && o.dims[2] == 5 && o.dims[1] != 5;
-    const int64_t N = static_cast<int64_t>(o.data.size() / 5);
-    auto at = [&](int c, int64_t i) { return channel_last ? o.data[i * 5 + c] : o.data[c * N + i]; };
+    // YOLOv8 raw head: 3 outputs [1,65,h,w] = 64 DFL box logits (4 sides x 16 bins) + 1 person logit.
     std::vector<Cand> cand;
-    for (int64_t i = 0; i < N; ++i) {
-        const float sc = at(4, i);
-        if (sc <= conf_) continue;
-        const float cx = at(0, i), cy = at(1, i), bw = at(2, i), bh = at(3, i);
-        cand.push_back({cx - bw / 2, cy - bh / 2, cx + bw / 2, cy + bh / 2, sc});
+    for (const RknnOutput& o : outs) {
+        if (o.dims.size() != 4 || o.dims[1] != 65) continue;
+        const int gh = o.dims[2], gw = o.dims[3], n = gh * gw;
+        const float stride = static_cast<float>(H) / gh;
+        const float* p = o.data.data();
+        for (int i = 0; i < n; ++i) {
+            const float sc = 1.f / (1.f + std::exp(-p[64 * n + i]));
+            if (sc <= conf_) continue;
+            float d[4];
+            for (int k = 0; k < 4; ++k) {  // softmax over 16 bins -> expected distance in cells
+                float mx = -1e30f;
+                for (int j = 0; j < 16; ++j) mx = std::max(mx, p[(k * 16 + j) * n + i]);
+                float sum = 0.f, acc = 0.f;
+                for (int j = 0; j < 16; ++j) {
+                    const float e = std::exp(p[(k * 16 + j) * n + i] - mx);
+                    sum += e;
+                    acc += e * j;
+                }
+                d[k] = acc / sum;
+            }
+            const float gx = (i % gw) + 0.5f, gy = (i / gw) + 0.5f;
+            cand.push_back({(gx - d[0]) * stride, (gy - d[1]) * stride, (gx + d[2]) * stride, (gy + d[3]) * stride, sc});
+        }
     }
     const std::vector<int> keep = nms(cand, iou_);
     w.msYolo += nowMs() - t0;

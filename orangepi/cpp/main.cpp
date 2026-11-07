@@ -27,7 +27,7 @@ namespace {
 struct Args {
     std::string cams = "1-12";
     std::string cameraFile = "configs/cameras.txt";
-    std::string yolo = "models/yolo11n_person_fp16.rknn";
+    std::string yolo = "models/yolov8n_person_fp16.rknn";
     std::string reid = "models/osnet_x0_25_fp16.rknn";
     std::string videos = "videos";
     std::string out = "out_rknn_cpp.mp4";

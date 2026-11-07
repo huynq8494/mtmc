@@ -2,7 +2,7 @@
 
   python orangepi/python/main_rknn.py --check
   python orangepi/python/main_rknn.py --cams 1,7,8 --max-frames 50
-  python orangepi/python/main_rknn.py --yolo models/yolo11n_person_int8.rknn --reid models/osnet_x0_25_fp16.rknn
+  python orangepi/python/main_rknn.py --yolo models/yolov8n_person_int8.rknn --reid models/osnet_x0_25_fp16.rknn
 
 Reuses config.py / geometry.py / tracker.py from the parent folder. Run from anywhere; relative paths
 (videos, models, outputs) are resolved against the mtmc/ project root.
@@ -19,7 +19,7 @@ import cv2, numpy as np
 
 p = argparse.ArgumentParser()
 p.add_argument("--cams", default="1-12", help="e.g. 1-12 or 1,7,8,10,11")
-p.add_argument("--yolo", default="models/yolo11n_person_fp16.rknn")
+p.add_argument("--yolo", default="models/yolov8n_person_fp16.rknn")
 p.add_argument("--reid", default="models/osnet_x0_25_fp16.rknn")
 p.add_argument("--imgsz", type=int, nargs=2, default=[544, 960], metavar=("H", "W"), help="YOLO model input size")
 p.add_argument("--conf", type=float, default=0.35)

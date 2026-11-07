@@ -5,8 +5,8 @@
   python orangepi/export/convert_rknn.py --dtype both          # fp16 and int8 side by side
   python orangepi/export/convert_rknn.py --only osnet --dtype fp16
 
-Outputs: models/yolo11n_person_{fp16,int8}.rknn  models/osnet_x0_25_{fp16,int8}.rknn
-INT8 can fail or lose accuracy (the YOLO output mixes pixel boxes and 0..1 scores, OSNet embeddings are
+Outputs: models/yolov8n_person_{fp16,int8}.rknn  models/osnet_x0_25_{fp16,int8}.rknn
+INT8 can fail or lose accuracy (the YOLO raw head mixes DFL box logits and a person logit, OSNet embeddings are
 sensitive), so fp16 is the default and both variants can be produced. Mean/std are baked into the model,
 the board feeds raw uint8 RGB.
 """
@@ -20,7 +20,7 @@ NORM = {
     "yolo": ([[0, 0, 0]], [[255, 255, 255]]),
     "osnet": ([[123.675, 116.28, 103.53]], [[58.395, 57.12, 57.375]]),  # ImageNet
 }
-MODELS = {"yolo": "yolo11n_person", "osnet": "osnet_x0_25"}
+MODELS = {"yolo": "yolov8n_person", "osnet": "osnet_x0_25"}
 
 
 def convert(kind, onnx, out, dtype, dataset, target, algo):
