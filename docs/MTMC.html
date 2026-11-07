@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MTMC - Multi-Target Multi-Camera Tracking</title>
+<style>
+:root { --bg:#fff; --fg:#1f2328; --mut:#656d76; --bd:#d0d7de; --code:#f6f8fa; --acc:#0969da; }
+@media (prefers-color-scheme: dark) { :root { --bg:#0d1117; --fg:#e6edf3; --mut:#8b949e; --bd:#30363d; --code:#161b22; --acc:#58a6ff; } }
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.6 -apple-system,Segoe UI,Helvetica,Arial,sans-serif; }
+.layout { display:flex; max-width:1400px; margin:0 auto; }
+nav { position:sticky; top:0; align-self:flex-start; width:300px; max-height:100vh; overflow:auto; padding:24px 16px; border-right:1px solid var(--bd); font-size:14px; }
+nav .toc ul { list-style:none; margin:0; padding-left:14px; }
+nav .toc > ul { padding-left:0; }
+nav a { color:var(--fg); text-decoration:none; display:block; padding:2px 0; }
+nav a:hover { color:var(--acc); }
+main { flex:1; min-width:0; padding:24px 48px 80px; }
+h1,h2,h3 { line-height:1.25; }
+h1 { border-bottom:1px solid var(--bd); padding-bottom:.3em; }
+h2 { border-bottom:1px solid var(--bd); padding-bottom:.3em; margin-top:2em; }
+a { color:var(--acc); }
+code { background:var(--code); padding:.15em .35em; border-radius:4px; font:85% ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+pre { background:var(--code); padding:14px 16px; border-radius:6px; overflow:auto; border:1px solid var(--bd); }
+pre code { background:none; padding:0; font-size:85%; }
+table { border-collapse:collapse; display:block; overflow:auto; margin:1em 0; }
+th,td { border:1px solid var(--bd); padding:6px 12px; text-align:left; vertical-align:top; }
+th { background:var(--code); }
+hr { border:0; border-top:1px solid var(--bd); margin:2em 0; }
+.toc-inline { display:none; }
+@media (max-width:900px) { nav { display:none; } main { padding:16px; } }
+@media print { nav { display:none; } main { padding:0; } }
+</style></head>
+<body><div class="layout">
+<nav><div class="toc">
+<ul>
+<li><a href="#1-what-the-application-does">1. What the application does</a></li>
+<li><a href="#2-pipeline-overview">2. Pipeline overview</a></li>
+<li><a href="#3-directory-layout">3. Directory layout</a></li>
+<li><a href="#4-installation-and-running">4. Installation and running</a><ul>
+<li><a href="#command-line-options">Command line options</a></li>
+</ul>
+</li>
+<li><a href="#5-coordinate-systems-and-conventions">5. Coordinate systems and conventions</a><ul>
+<li><a href="#51-world-frame">5.1 World frame</a></li>
+<li><a href="#52-camera-positions-from-configscamera_propertiestxt-xformoptranslate">5.2 Camera positions (from configs/camera_properties.txt, xformOp:translate)</a></li>
+<li><a href="#53-walkable-floor-the-ground-limit">5.3 Walkable floor (the "ground limit")</a></li>
+<li><a href="#54-camera-frame-and-orientation">5.4 Camera frame and orientation</a></li>
+<li><a href="#55-image-frame">5.5 Image frame</a></li>
+<li><a href="#56-map-frame">5.6 Map frame</a></li>
+</ul>
+</li>
+<li><a href="#6-camera-model-and-the-pixel-to-floor-math-geometrypy">6. Camera model and the pixel-to-floor math (geometry.py)</a><ul>
+<li><a href="#61-intrinsics">6.1 Intrinsics</a></li>
+<li><a href="#62-cameragrounduv-pixel-to-floor-point">6.2 Camera.ground(uv) - pixel to floor point</a></li>
+<li><a href="#63-cameraprojectxyz-world-to-pixel">6.3 Camera.project(xyz) - world to pixel</a></li>
+<li><a href="#64-checkids-the-check-diagnostic">6.4 check(ids) - the --check diagnostic</a></li>
+</ul>
+</li>
+<li><a href="#7-camera-configuration-parsing-parse_camera_configpy">7. Camera configuration parsing (parse_camera_config.py)</a></li>
+<li><a href="#8-detection-and-appearance-embedding-detectorpy">8. Detection and appearance embedding (detector.py)</a><ul>
+<li><a href="#81-class-detectordevice-imgsz960-conf035">8.1 Class Detector(device, imgsz=960, conf=0.35)</a></li>
+<li><a href="#82-__call__frames">8.2 __call__(frames)</a></li>
+</ul>
+</li>
+<li><a href="#9-cross-camera-fusion-trackerfuse">9. Cross-camera fusion (tracker.fuse)</a></li>
+<li><a href="#10-tracking-trackerpy">10. Tracking (tracker.py)</a><ul>
+<li><a href="#101-track">10.1 Track</a></li>
+<li><a href="#102-trackerstepfused-dt-one-time-step">10.2 Tracker.step(fused, dt) - one time step</a></li>
+</ul>
+</li>
+<li><a href="#11-the-map-and-debug-output-mainpy">11. The map and debug output (main.py)</a><ul>
+<li><a href="#111-main-loop">11.1 Main loop</a></li>
+<li><a href="#112-filters-on-every-detection-this-enforces-the-ground-limit">11.2 Filters on every detection (this enforces the ground limit)</a></li>
+<li><a href="#113-four-layers-of-protection-for-nobody-leaves-the-floor">11.3 Four layers of protection for "nobody leaves the floor"</a></li>
+<li><a href="#114-map-drawing">11.4 Map drawing</a></li>
+<li><a href="#115-debug">11.5 --debug</a></li>
+<li><a href="#116-statistics-printed-at-the-end">11.6 Statistics printed at the end</a></li>
+</ul>
+</li>
+<li><a href="#12-what-was-verified-and-how">12. What was verified and how</a><ul>
+<li><a href="#121-geometry-checks">12.1 Geometry checks</a></li>
+<li><a href="#122-field-of-view-cross-camera-agreement-test">12.2 Field of view (cross-camera agreement test)</a></li>
+<li><a href="#123-full-run-all-12-cameras-cpu-step-10-75-map-frames">12.3 Full run (all 12 cameras, CPU, --step 10, 75 map frames)</a></li>
+<li><a href="#124-what-has-not-been-verified">12.4 What has not been verified</a></li>
+</ul>
+</li>
+<li><a href="#13-known-weaknesses-and-suggested-next-steps">13. Known weaknesses and suggested next steps</a></li>
+<li><a href="#14-parameter-reference-configpy">14. Parameter reference (config.py)</a></li>
+<li><a href="#15-troubleshooting">15. Troubleshooting</a></li>
+<li><a href="#16-file-by-file-function-index">16. File-by-file function index</a></li>
+</ul>
+</div>
+</nav>
+<main><h1 id="mtmc-multi-target-multi-camera-tracking-on-a-2d-warehouse-map">MTMC - Multi-Target Multi-Camera Tracking on a 2D Warehouse Map</h1>
+<p>This document explains everything in <code>~/study/mtmc/</code>: what the program does, the math behind it, every file and
+function, every tunable parameter, how the camera config is parsed, what has been verified, and what is still weak.</p>
+<hr />
+<h2 id="1-what-the-application-does">1. What the application does</h2>
+<p>Input: 12 synchronized videos (<code>videos/camera01.mp4</code> ... <code>camera12.mp4</code>) recorded in an NVIDIA Isaac Sim warehouse.
+Each video is 1920x1080, 50 fps, 755 frames (about 15.1 s). About 10 people walk in the warehouse.</p>
+<p>Output: a top-down 2D map that shows, for every moment in time,</p>
+<ul>
+<li>the walkable floor rectangle,</li>
+<li>the 12 cameras with their field-of-view wedge,</li>
+<li>each tracked person as a coloured dot with a numeric ID and a fading trail.</li>
+</ul>
+<p>The map is written to <code>out.mp4</code> and can be shown live with <code>--show</code>.</p>
+<p>The core idea is <strong>ground-plane triangulation</strong>: a person's feet touch the floor (z = 0), and a camera pixel
+is a ray in 3D. Intersecting the ray through the foot pixel with the floor gives the person's (x, y) on the map.
+Because the 12 cameras overlap, the same person is seen several times; those observations are fused and tracked.</p>
+<hr />
+<h2 id="2-pipeline-overview">2. Pipeline overview</h2>
+<pre><code> videos/cameraNN.mp4  (N = enabled cameras)
+        |
+        |  main.py: grab (step-1) frames, read 1 frame per camera
+        v
+ +-----------------+   detector.py
+ | YOLO11n         |   person boxes (x1,y1,x2,y2,conf)       per camera, batched
+ | OSNet x0.25     |   512-d appearance embedding per crop   per box
+ +-----------------+
+        |
+        v   foot pixel = (box centre x, box bottom y)
+ +-----------------+   geometry.py  Camera.ground()
+ | pixel -&gt; ray    |   ray (camera frame) -&gt; world frame with R
+ | ray x floor z=0 |   world (x, y) + distance from camera
+ +-----------------+
+        |
+        v   filters in main.py
+   drop if: box touches bottom edge | ray misses floor | point outside floor box (+1 m)
+        |
+        v
+ +-----------------+   tracker.py  fuse()
+ | cross-camera    |   cluster points of the same person from different cameras
+ | fusion          |   -&gt; one (x, y, embedding, cameras) per person per time step
+ +-----------------+
+        |
+        v
+ +-----------------+   tracker.py  Tracker.step()
+ | Kalman + Hungar.|   stable IDs, confirm/delete logic, floor clamp
+ +-----------------+
+        |
+        v
+ 2D map (main.py draw())  -&gt;  out.mp4  and optional live window
+</code></pre>
+<hr />
+<h2 id="3-directory-layout">3. Directory layout</h2>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>main.py</code></td>
+<td>Command line, main loop, map drawing, statistics. Entry point.</td>
+</tr>
+<tr>
+<td><code>config.py</code></td>
+<td>Constants: image size and FOV (from the parsed cameras), floor bounds, tracker parameters.</td>
+</tr>
+<tr>
+<td><code>parse_camera_config.py</code></td>
+<td>Standalone script (stdlib only): converts the Isaac Sim camera export into <code>configs/cameras.py</code> (or <code>.json</code>).</td>
+</tr>
+<tr>
+<td><code>geometry.py</code></td>
+<td>Camera model (rotation, pixel to floor, world to pixel) and the <code>--check</code> diagnostic.</td>
+</tr>
+<tr>
+<td><code>detector.py</code></td>
+<td>YOLO person detector plus OSNet appearance embedding. Chooses CPU or CUDA.</td>
+</tr>
+<tr>
+<td><code>tracker.py</code></td>
+<td>Cross-camera fusion, Kalman track, Hungarian association, confirm/delete rules.</td>
+</tr>
+<tr>
+<td><code>osnet.py</code></td>
+<td>OSNet network definition. Copied unchanged from the <code>deep-person-reid</code> project (MIT licence).</td>
+</tr>
+<tr>
+<td><code>configs/camera_properties.txt</code></td>
+<td>Given by you: raw camera properties exported from Isaac Sim (single source of truth).</td>
+</tr>
+<tr>
+<td><code>configs/camera_defaults.json</code></td>
+<td>Default values used for any property missing from the export.</td>
+</tr>
+<tr>
+<td><code>configs/cameras.py</code></td>
+<td>Generated by <code>parse_camera_config.py</code>; do not edit. <code>CAMERAS[id]</code> has position, quaternion, rotation matrix, intrinsics.</td>
+</tr>
+<tr>
+<td><code>models/osnet_x0_25_msmt17.pth</code></td>
+<td>Given by you: OSNet x0.25 weights trained on MSMT17.</td>
+</tr>
+<tr>
+<td><code>yolo11n.pt</code></td>
+<td>YOLO11 nano weights, downloaded automatically by ultralytics on first run.</td>
+</tr>
+<tr>
+<td><code>videos/</code></td>
+<td>The 12 input videos.</td>
+</tr>
+<tr>
+<td><code>tools/plot2D.py</code></td>
+<td>Your own small matplotlib script that plots camera positions (not used by the app).</td>
+</tr>
+<tr>
+<td><code>pyproject.toml</code>, <code>uv.lock</code></td>
+<td>Python environment definition (managed by <code>uv</code>).</td>
+</tr>
+<tr>
+<td><code>out.mp4</code>, <code>debug_cams.mp4</code></td>
+<td>Generated outputs.</td>
+</tr>
+<tr>
+<td><code>docs/</code></td>
+<td>This documentation.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-installation-and-running">4. Installation and running</h2>
+<p>The environment is managed by <code>uv</code> and lives in <code>.venv/</code> (Python 3.11).</p>
+<pre><code class="language-bash">cd ~/study/mtmc
+uv sync                      # creates .venv from pyproject.toml / uv.lock
+uv run main.py --check       # camera diagnostic, no video processing
+uv run main.py               # all 12 cameras, auto CPU/GPU, writes out.mp4
+</code></pre>
+<p>Dependencies: <code>numpy</code>, <code>scipy</code>, <code>opencv-python</code>, <code>torch</code>, <code>torchvision</code>, <code>ultralytics</code>.
+<code>torchreid</code> is deliberately <strong>not</strong> installed (its build failed here); only <code>osnet.py</code> is vendored.
+<code>matplotlib</code> is needed only for <code>tools/plot2D.py</code> and is not in <code>pyproject.toml</code>.</p>
+<h3 id="command-line-options">Command line options</h3>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--cams</code></td>
+<td><code>1-12</code></td>
+<td>Enabled cameras. Ranges and lists: <code>1-12</code>, <code>1,7,8,10,11</code>, <code>9-12</code>.</td>
+</tr>
+<tr>
+<td><code>--device</code></td>
+<td><code>auto</code></td>
+<td><code>auto</code> uses CUDA if <code>torch.cuda.is_available()</code>, else CPU. Or force <code>cpu</code> / <code>cuda</code>.</td>
+</tr>
+<tr>
+<td><code>--step</code></td>
+<td><code>5</code></td>
+<td>Process every Nth frame. Videos are 50 fps, so <code>5</code> gives 10 map frames per second, <code>10</code> gives 5.</td>
+</tr>
+<tr>
+<td><code>--max-frames</code></td>
+<td><code>0</code></td>
+<td>Stop after N processed frames (0 = whole video).</td>
+</tr>
+<tr>
+<td><code>--imgsz</code></td>
+<td><code>960</code></td>
+<td>YOLO input size. Larger finds smaller/farther people but is slower.</td>
+</tr>
+<tr>
+<td><code>--hfov</code></td>
+<td>from config</td>
+<td>Override horizontal field of view in degrees.</td>
+</tr>
+<tr>
+<td><code>--out</code></td>
+<td><code>out.mp4</code></td>
+<td>Map video file.</td>
+</tr>
+<tr>
+<td><code>--show</code></td>
+<td>off</td>
+<td>Live window; press <code>q</code> to quit.</td>
+</tr>
+<tr>
+<td><code>--debug</code></td>
+<td>off</td>
+<td>Draw raw points on the map and write <code>debug_cams.mp4</code> (see section 11).</td>
+</tr>
+<tr>
+<td><code>--check</code></td>
+<td>off</td>
+<td>Print camera pose diagnostic and exit.</td>
+</tr>
+</tbody>
+</table>
+<p>Typical commands:</p>
+<pre><code class="language-bash">uv run main.py --cams 9-12 --device cpu --step 10 --debug --show   # the south-east rectangle only
+uv run main.py --cams 1,7,8,10,11                                   # fewer cameras, faster
+uv run main.py --hfov 55 --check                                    # try another field of view
+</code></pre>
+<p>Messages like <code>QFontDatabase: Cannot find font directory ... cv2/qt/fonts</code> when using <code>--show</code> are harmless
+OpenCV/Qt warnings about missing fonts.</p>
+<hr />
+<h2 id="5-coordinate-systems-and-conventions">5. Coordinate systems and conventions</h2>
+<h3 id="51-world-frame">5.1 World frame</h3>
+<p>Right-handed, metres. X and Y lie on the floor, <strong>Z is up</strong>. The floor is z = 0. All cameras are mounted at z = 3 m.</p>
+<h3 id="52-camera-positions-from-configscamera_propertiestxt-xformoptranslate">5.2 Camera positions (from <code>configs/camera_properties.txt</code>, <code>xformOp:translate</code>)</h3>
+<table>
+<thead>
+<tr>
+<th>Cam</th>
+<th>x</th>
+<th>y</th>
+<th>Wall / role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1-6</td>
+<td>-22.84, -17.89, -12.94, -7.98, -3.02, 1.94</td>
+<td>30</td>
+<td>north wall, evenly spaced</td>
+</tr>
+<tr>
+<td>7</td>
+<td>5</td>
+<td>30</td>
+<td>north-east corner</td>
+</tr>
+<tr>
+<td>8</td>
+<td>-26</td>
+<td>30</td>
+<td>north-west corner</td>
+</tr>
+<tr>
+<td>9</td>
+<td>-26</td>
+<td>8.5</td>
+<td>west wall, middle</td>
+</tr>
+<tr>
+<td>10</td>
+<td>-26</td>
+<td>-23</td>
+<td>south-west corner</td>
+</tr>
+<tr>
+<td>11</td>
+<td>5</td>
+<td>-23</td>
+<td>south-east corner</td>
+</tr>
+<tr>
+<td>12</td>
+<td>5</td>
+<td>8.5</td>
+<td>east wall, middle</td>
+</tr>
+</tbody>
+</table>
+<p>Seen from above with Y pointing up on the map:</p>
+<pre><code>   8 (-26,30)   1  2  3  4  5  6   7 (5,30)
+   +---------------------------------+
+   |                                 |
+   9 (-26,8.5)                  12 (5,8.5)
+   |                                 |
+   |                                 |
+   +---------------------------------+
+  10 (-26,-23)                  11 (5,-23)
+</code></pre>
+<h3 id="53-walkable-floor-the-ground-limit">5.3 Walkable floor (the "ground limit")</h3>
+<p>The bounding box of all camera positions defines the floor rectangle (here set by the corner cameras 7, 8, 10, 11):</p>
+<pre><code>x in [-26, 5]     y in [-23, 30]       (31 m x 53 m)
+</code></pre>
+<p><code>config.py</code> computes <code>XMIN, XMAX, YMIN, YMAX</code> from the parsed camera positions, so if you move a camera and
+re-parse the export, the limit follows automatically.</p>
+<h3 id="54-camera-frame-and-orientation">5.4 Camera frame and orientation</h3>
+<p>The convention is the one used by USD / Isaac Sim cameras:</p>
+<ul>
+<li>the camera looks along its local <strong>-Z</strong> axis,</li>
+<li>local <strong>+Y</strong> is the image "up" direction,</li>
+<li>local <strong>+X</strong> is the image "right" direction.</li>
+</ul>
+<p>Orientation is the exported unit quaternion <code>xformOp:orient</code> = (w, x, y, z). <code>parse_camera_config.py</code> converts it to the
+camera-to-world rotation matrix <code>R</code> (stored as <code>rotation</code> in <code>configs/cameras.py</code>). A camera direction in the world is
+<code>R @ d_camera</code>. No Euler angles and no manual pose overrides are used.</p>
+<p>Resulting directions (from <code>--check</code>):</p>
+<ul>
+<li>Cameras 1-6: <code>fwd = (0, -0.97, -0.26)</code>, looking south (into the warehouse from the north wall), 15 degrees below the horizon.</li>
+<li>Cameras 7 and 8: <code>fwd = (-0.97, -0.26, 0)</code> (west) and <code>(+0.97, -0.26, 0)</code> (east).</li>
+<li>Cameras 9-12: diagonal, <code>fwd = (+-0.71, +-0.71, 0)</code>, all upright (<code>up.z = +1</code>).</li>
+<li><code>fwd = R @ [0, 0, -1]</code> is the viewing direction; <code>up = R @ [0, 1, 0]</code>. If <code>up.z &lt; 0</code> the image is upside down.
+  <code>--check</code> flags this as <code>UPSIDE-DOWN</code>.</li>
+</ul>
+<h3 id="55-image-frame">5.5 Image frame</h3>
+<p>Pixel <code>(u, v)</code>, origin top-left, <code>u</code> to the right, <code>v</code> downwards. Size <code>W x H</code> = parsed <code>resolution</code> (1920 x 1080 by default), principal point at the image centre.</p>
+<h3 id="56-map-frame">5.6 Map frame</h3>
+<p><code>main.py</code> draws at 15 pixels per metre with a 40 px margin; world Y is flipped so north is up:</p>
+<pre><code>px = 40 + (x - XMIN) * 15         py = 40 + (YMAX - y) * 15
+</code></pre>
+<p>The map image is 545 x 875 pixels.</p>
+<hr />
+<h2 id="6-camera-model-and-the-pixel-to-floor-math-geometrypy">6. Camera model and the pixel-to-floor math (<code>geometry.py</code>)</h2>
+<h3 id="61-intrinsics">6.1 Intrinsics</h3>
+<p>Pinhole camera, no lens distortion, square pixels, principal point at the centre.</p>
+<pre><code>HFOV = 2 * atan( aperture / 2 / focal_length ) = 2 * atan( 20.955 / 2 / 18.15 ) = 60.0 deg
+F    = (W / 2) / tan(HFOV / 2)                                           = 1663 px
+</code></pre>
+<p>The Isaac Sim default camera has a 20.955 mm horizontal aperture and an 18.15 mm focal length, which gives 60 degrees.
+The video files themselves carry no camera data, so this is an assumption. It was <strong>validated</strong> by checking that
+cameras 9, 10, 11 and 12 agree on where people stand (see section 12.2). Override with <code>--hfov</code>.</p>
+<h3 id="62-cameragrounduv-pixel-to-floor-point">6.2 <code>Camera.ground(uv)</code> - pixel to floor point</h3>
+<p>For a pixel <code>(u, v)</code>:</p>
+<ol>
+<li>Ray in the camera frame: <code>d_cam = ( (u - W/2)/F , -(v - H/2)/F , -1 )</code>. The minus on the second term is
+   because image <code>v</code> grows downward while camera <code>+Y</code> is up. The <code>-1</code> is "forward" (-Z).</li>
+<li>Rotate into the world: <code>d = R @ d_cam</code>, then normalise.</li>
+<li>The ray is <code>P(t) = C + t * d</code> with <code>C</code> the camera position. The floor is <code>z = 0</code>, so
+   <code>t = -C.z / d.z</code>. This only makes sense if the ray points downward (<code>d.z &lt; 0</code>); otherwise the pixel sees sky/horizon
+   and the result is marked invalid.</li>
+<li>Floor point: <code>(C.x + t*d.x , C.y + t*d.y)</code>. The distance <code>t</code> is returned too.</li>
+<li>Points farther than <code>MAX_RANGE = 80 m</code> are marked invalid.</li>
+</ol>
+<p>Return values: <code>(xy, ok, t)</code>. The code is vectorised over many pixels.</p>
+<p>Why the foot point: the bottom-centre of the person box is where the person touches the floor. Using the box centre
+would put the point at hip height and shift the projection away from the camera.</p>
+<p><strong>Sensitivity (important to understand errors):</strong> with a camera 3 m high, a pixel near the horizon corresponds to a
+very long ground distance, so a few pixels of box error or a small error in FOV/tilt becomes metres on the map.
+This is why far detections are weighted less in the fusion step (section 9).</p>
+<h3 id="63-cameraprojectxyz-world-to-pixel">6.3 <code>Camera.project(xyz)</code> - world to pixel</h3>
+<p>The inverse operation (world point to pixel and an "inside image" mask). It is used only by <code>--check</code>
+to find which parts of the floor each camera can see.</p>
+<h3 id="64-checkids-the-check-diagnostic">6.4 <code>check(ids)</code> - the <code>--check</code> diagnostic</h3>
+<p>For every enabled camera prints position, viewing direction <code>fwd</code>, <code>up.z</code>, the floor point hit by the bottom-centre of
+the image, and the fraction of the floor grid (1 m spacing) inside the image. It prints flags:</p>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>UPSIDE-DOWN</code></td>
+<td><code>up.z &lt; 0</code>, the image is flipped.</td>
+</tr>
+<tr>
+<td><code>NO-GROUND-AT-BOTTOM</code></td>
+<td>the bottom of the image never reaches the floor.</td>
+</tr>
+<tr>
+<td><code>LOOKS-OUTSIDE-BOUNDS</code></td>
+<td>the bottom-centre hit is more than 2 m outside the floor rectangle.</td>
+</tr>
+<tr>
+<td><code>SEES-&lt;5%-OF-FLOOR</code></td>
+<td>the camera sees almost no floor.</td>
+</tr>
+</tbody>
+</table>
+<p>Finally prints how much of the floor is covered by at least one and at least two cameras
+(currently 100 % and 100 % at 60 degrees HFOV).</p>
+<hr />
+<h2 id="7-camera-configuration-parsing-parse_camera_configpy">7. Camera configuration parsing (<code>parse_camera_config.py</code>)</h2>
+<p>All camera data comes from the Isaac Sim export <code>configs/camera_properties.txt</code>; there are no manual pose fixes.</p>
+<pre><code>python parse_camera_config.py                    # -&gt; configs/cameras.py (default)
+python parse_camera_config.py --format json      # -&gt; configs/cameras.json
+python parse_camera_config.py -i props.txt -d defaults.json -o out.py --strict --quiet
+uv run main.py --parse-cameras [--camera-props P] [--camera-defaults D]   # parse, then run
+</code></pre>
+<ul>
+<li>Properties missing from the export (here: aperture, resolution, and <code>centerOfInterest</code> of cameras 3-6) are taken from
+  <code>configs/camera_defaults.json</code>, and one warning per property is printed. <code>--strict</code> turns this into an error.</li>
+<li>Derived values: rotation matrix, <code>forward</code>, <code>up</code>, <code>hfov_deg</code>, <code>focal_px</code>.</li>
+<li>The old Euler-angle files were removed. The exported quaternion of camera 12 gives <code>fwd = (-0.71, -0.71, 0)</code> and
+  <code>up.z = +1</code>, i.e. the pose that used to be hand-corrected; the Euler file had been wrong for camera 12 only.</li>
+</ul>
+<p><strong>Not verified:</strong> cameras 1-8 were never checked against the images. Cameras 9-12 agree with each other to about 0.4 m
+(section 12.2). Cameras 7 and 8 are the ones with the most rejected detections (camera 7: 46 %); this is mostly because
+people's feet are cut off by the bottom image edge, but a small pose error cannot be excluded (see section 13).</p>
+<hr />
+<h2 id="8-detection-and-appearance-embedding-detectorpy">8. Detection and appearance embedding (<code>detector.py</code>)</h2>
+<h3 id="81-class-detectordevice-imgsz960-conf035">8.1 Class <code>Detector(device, imgsz=960, conf=0.35)</code></h3>
+<ul>
+<li><code>device</code>: <code>auto</code> picks CUDA when available. Everything (YOLO and OSNet) runs on the same device.</li>
+<li><strong>YOLO11n</strong> (<code>yolo11n.pt</code>): the fastest YOLO11 size. Only class 0 (person) is requested, confidence threshold 0.35.
+  On CUDA it runs in half precision (<code>half=True</code>); on CPU it runs in float32.</li>
+<li><strong>OSNet x0.25</strong>: a small person re-identification network. It is built with <code>num_classes=4101</code>
+  (the MSMT17 training identities) and the weights are loaded from <code>models/osnet_x0_25_msmt17.pth</code>. The classifier is
+  not used; in eval mode the network returns the 512-dimensional feature.</li>
+</ul>
+<h3 id="82-__call__frames">8.2 <code>__call__(frames)</code></h3>
+<p>Input: list of BGR frames (one per enabled camera). Steps:</p>
+<ol>
+<li>One batched YOLO call for all frames. Boxes are in pixels of the original 1920x1080 image.</li>
+<li>For every box, crop the frame, convert BGR to RGB (<code>[..., ::-1]</code>), resize to <strong>128 x 256</strong> (width x height).</li>
+<li>Normalise with ImageNet mean/std, stack all crops of all cameras in a single tensor, and run OSNet once.</li>
+<li>L2-normalise the 512-d vectors so that a dot product equals cosine similarity.</li>
+<li>Split the results back per camera.</li>
+</ol>
+<p>Output: for each frame a tuple <code>(boxes (N,5) [x1,y1,x2,y2,conf], embeddings (N,512))</code>.</p>
+<hr />
+<h2 id="9-cross-camera-fusion-trackerfuse">9. Cross-camera fusion (<code>tracker.fuse</code>)</h2>
+<p>Goal: turn many single-camera observations of one person into one measurement.</p>
+<p>Input: list of <code>(xy, embedding, camera_id, range)</code>.</p>
+<p>Algorithm (greedy clustering):</p>
+<ol>
+<li>Sort observations by range, <strong>nearest camera first</strong>. Near observations are the most precise (see 6.2).</li>
+<li>For each observation, look for an existing cluster whose current position is within
+   <code>FUSE_D + 0.03 * range</code> metres (0.8 m + 3 % of range, so far observations are allowed more disagreement),
+   <strong>and which has no observation from the same camera yet</strong> (one person cannot appear twice in one camera view).</li>
+<li>If found, add it to the cluster and recompute the cluster position as a weighted mean, weights <code>1 / range^2</code>.
+   Otherwise start a new cluster.</li>
+<li>Cluster embedding = mean of the member embeddings, re-normalised.</li>
+</ol>
+<p>Output: list of <code>(xy, embedding, [camera ids])</code>. The number of camera ids is a confidence indicator: a cluster seen by
+several cameras is far more trustworthy than a single observation.</p>
+<p>Limitations: it is a greedy algorithm, so two people standing closer than the threshold can merge, and a bad single
+observation can be glued to the wrong person. Appearance is <strong>not</strong> used here, only distance.</p>
+<hr />
+<h2 id="10-tracking-trackerpy">10. Tracking (<code>tracker.py</code>)</h2>
+<h3 id="101-track">10.1 <code>Track</code></h3>
+<p>State <code>x = [px, py, vx, vy]</code> (floor position and velocity), covariance <code>P</code>, plus the mean appearance embedding, the number
+of <code>hits</code>, the number of consecutive misses <code>miss</code>, the cameras that saw it last (<code>cams</code>), <code>confirmed</code> flag, and the
+<code>trail</code> of positions.</p>
+<ul>
+<li><code>predict(dt)</code>: constant velocity model. <code>F</code> adds <code>dt * v</code> to the position. Process noise
+  <code>diag(0.05, 0.05, 0.5, 0.5) * dt</code>. Increments <code>miss</code>.</li>
+<li><code>update(xy, emb, cams)</code>: Kalman update with measurement noise 0.3 on each axis. After the update the position is
+  clamped into the floor rectangle. The embedding is blended: <code>0.9 * old + 0.1 * new</code>. <code>miss</code> returns to 0.</li>
+</ul>
+<h3 id="102-trackerstepfused-dt-one-time-step">10.2 <code>Tracker.step(fused, dt)</code> - one time step</h3>
+<p><code>dt = step / fps</code> seconds (for <code>--step 10</code> that is 0.2 s).</p>
+<ol>
+<li><strong>Delete stale tracks</strong>: tracks with <code>miss * dt &gt; MAX_MISS_S</code> (3 s) are removed. This frees slots.</li>
+<li><strong>Predict</strong> all remaining tracks and clamp them to the floor.</li>
+<li><strong>Build a cost matrix</strong> tracks x fused detections:
+   - <code>gate = GATE + 1.0 * miss * dt</code> (1.5 m, growing by 1 m per second of being lost);
+   - <code>d = distance / gate</code>; if <code>d &gt;= 1</code> the pair is forbidden (cost 1000);
+   - otherwise <code>cost = d + 0.5 * (1 - cosine_similarity(track embedding, detection embedding))</code>.
+   So geometry decides the gate, and appearance only adds a smaller preference between candidates.</li>
+<li><strong>Hungarian assignment</strong> (<code>scipy.optimize.linear_sum_assignment</code>) gives the globally cheapest one-to-one matching;
+   pairs that hit the forbidden cost are dropped.</li>
+<li><strong>Update</strong> matched tracks. For unmatched detections <strong>create a new track</strong> if fewer than <code>PEOPLE</code> (10) tracks exist;
+   otherwise the detection is ignored.</li>
+<li><strong>Confirm</strong>: a track becomes <code>confirmed</code> once it has <code>hits &gt;= CONFIRM</code> (3) or was seen by 2 or more cameras at the
+   same time. Once confirmed it stays confirmed.</li>
+<li><strong>Return</strong> only tracks that are confirmed <strong>and</strong> matched in this very step (<code>miss == 0</code>).</li>
+</ol>
+<p>Consequences you will see on the map:</p>
+<ul>
+<li>A person who is not detected for a moment simply disappears from the map until detected again (up to 3 s, after which
+  the track is deleted and a later detection may get a <strong>new ID</strong>). The tracker does not draw predicted positions of
+  lost tracks.</li>
+<li>IDs are never reused; <code>next_id</code> only increases. So after a track is deleted, the same real person can show up as
+  ID 11, 12, ... Only 10 tracks can be alive at once.</li>
+</ul>
+<p>Why confirmation exists: before it was added, every single (possibly wrongly projected) detection in the first frame
+became a permanent track, filled all 10 slots, and the real people in the south-east were never tracked.</p>
+<hr />
+<h2 id="11-the-map-and-debug-output-mainpy">11. The map and debug output (<code>main.py</code>)</h2>
+<h3 id="111-main-loop">11.1 Main loop</h3>
+<p>For each iteration:</p>
+<ol>
+<li>For every enabled camera, <code>grab()</code> (skip) <code>step - 1</code> frames and <code>read()</code> one. If any video ended, stop.</li>
+<li>Run the detector on all frames.</li>
+<li>For each camera: compute foot points, project to floor, apply the filters below.</li>
+<li>Fuse, track, draw, write.</li>
+<li>Print a progress line, update statistics.</li>
+</ol>
+<h3 id="112-filters-on-every-detection-this-enforces-the-ground-limit">11.2 Filters on every detection (this enforces the ground limit)</h3>
+<pre><code class="language-python">ok &amp;= box_bottom &lt; H - 4                  # foot is visible, box not cut by the image bottom edge
+good = ok &amp; inside(xy, margin=1.0)        # ray hits the floor, and lies within the floor box +/- 1 m
+</code></pre>
+<ul>
+<li><strong>Bottom-cut boxes</strong> are rejected because if the feet are outside the image, the bottom of the box is not the foot and
+  the projection would be too close to the camera.</li>
+<li><strong>Out-of-floor points</strong> are rejected: they are errors (a wrong pose, a reflection, a person detected in a poster...).
+  The 1 m margin tolerates box jitter near walls.</li>
+</ul>
+<h3 id="113-four-layers-of-protection-for-nobody-leaves-the-floor">11.3 Four layers of protection for "nobody leaves the floor"</h3>
+<ol>
+<li>Detections whose floor point is outside the rectangle (+1 m) are dropped.</li>
+<li>Predictions are clamped into the rectangle (<code>config.clamp</code>).</li>
+<li>Updated Kalman states are clamped as well.</li>
+<li>At the end of the run <code>main.py</code> counts track positions outside the rectangle and <code>assert</code>s the count is zero.</li>
+</ol>
+<p>Honest note: because of layers 2 and 3 the final assertion cannot fail by construction; the meaningful evidence that
+the geometry is right is the per-camera rejected counts (see section 12), not that assertion.</p>
+<h3 id="114-map-drawing">11.4 Map drawing</h3>
+<ul>
+<li>Dark background, 5 m grid lines, grey rectangle for the floor.</li>
+<li>Cameras: orange dot with number, a thin wedge of radius 4 m and angle <code>HFOV</code> showing the viewing direction.</li>
+<li>People: coloured dot, white ID text, polyline trail with the last 40 positions. Colours come from 10 evenly spaced hues
+  and are chosen with <code>(id - 1) % 10</code>, so ID 11 shares the colour of ID 1.</li>
+<li>Header text: time in seconds, processed frame count, number of visible people, number of enabled cameras.</li>
+</ul>
+<h3 id="115-debug">11.5 <code>--debug</code></h3>
+<ul>
+<li>Small grey dots on the map for every accepted raw single-camera floor point (before fusion). Where grey dots from
+  different cameras clump together, those cameras agree. Grey dots that are far from every coloured dot are noise.</li>
+<li><code>debug_cams.mp4</code>: a 4-column grid of 480x270 thumbnails of all enabled cameras, with person boxes
+  (<strong>green = accepted, red = rejected</strong>) and the camera number.</li>
+</ul>
+<h3 id="116-statistics-printed-at-the-end">11.6 Statistics printed at the end</h3>
+<pre><code>processed=75 unique_ids=[1, ..., 11] raw_points_rejected_outside_ground=215 track_positions_outside_ground=0
+per-camera [dets, rejected]: {1: [94, 14], ..., 7: [293, 135], ..., 12: [148, 0]}
+</code></pre>
+<p><code>rejected</code> counts all rejected boxes (bottom-cut, no floor hit, outside floor). Large numbers on one camera mean its
+pose, field of view or framing needs attention.</p>
+<hr />
+<h2 id="12-what-was-verified-and-how">12. What was verified and how</h2>
+<h3 id="121-geometry-checks">12.1 Geometry checks</h3>
+<ul>
+<li><code>--check</code> at 60 degrees: no camera is flagged <code>UPSIDE-DOWN</code> or <code>LOOKS-OUTSIDE-BOUNDS</code>; 100 % of the floor is seen by at
+  least one camera and 100 % by at least two. Every camera looks into the warehouse, none looks outward.
+  Floor fraction seen per camera: cams 1-6: 57-73 %, cams 7-8: 27 %, cam 9 and 12: 40 %, cams 10-11: 65 %.</li>
+</ul>
+<h3 id="122-field-of-view-cross-camera-agreement-test">12.2 Field of view (cross-camera agreement test)</h3>
+<p>Using one synchronised frame from cameras 9, 10, 11, 12 (the south-east rectangle with 2 people), the mean distance from
+each observation to the nearest observation of another camera was measured for several FOV values:</p>
+<table>
+<thead>
+<tr>
+<th>HFOV</th>
+<th>Mean cross-camera distance</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>47.2 deg (my first guess)</td>
+<td>9.5 m</td>
+</tr>
+<tr>
+<td>55 deg</td>
+<td>3.1 m</td>
+</tr>
+<tr>
+<td><strong>60 deg</strong></td>
+<td><strong>0.38 m</strong></td>
+</tr>
+<tr>
+<td>65 deg</td>
+<td>3.1 m</td>
+</tr>
+</tbody>
+</table>
+<p>At 60 deg all four cameras place the two people at about (-11.2, -10.5) and (-6.7, -10.8) m. This is the main evidence
+that the 60 degree model and the poses of cameras 9-12 are consistent.</p>
+<h3 id="123-full-run-all-12-cameras-cpu-step-10-75-map-frames">12.3 Full run (all 12 cameras, CPU, <code>--step 10</code>, 75 map frames)</h3>
+<ul>
+<li>11 distinct IDs were created for about 10 people, so at least one person received a second ID after a track was
+  deleted (not checked which). No track position is outside the floor.</li>
+<li>Rejected detections per camera: cams 1-6: 9-22 each, <strong>cam 7: 135 of 293</strong>, cams 8-12: 0.</li>
+<li>Speed on this 32-core CPU machine: about 0.6 s per processed frame set (12 cameras), so a 15 s video at <code>--step 10</code>
+  takes about 45 s. GPU path implemented but <strong>not tested</strong> (no GPU on this machine).</li>
+</ul>
+<h3 id="124-what-has-not-been-verified">12.4 What has not been verified</h3>
+<ul>
+<li>The output videos were not inspected visually by me; the results above come from printed numbers.</li>
+<li>Identity correctness over time (does ID 5 always follow the same person?) was not measured; there is no ground truth.</li>
+<li>Poses of cameras 1-8 were not cross-checked against images.</li>
+</ul>
+<hr />
+<h2 id="13-known-weaknesses-and-suggested-next-steps">13. Known weaknesses and suggested next steps</h2>
+<table>
+<thead>
+<tr>
+<th>Issue</th>
+<th>Cause</th>
+<th>Suggestion</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Camera 7 rejects ~46 % of boxes</td>
+<td>People walk through the lower image edge, so the box bottom is cut off</td>
+<td>Accept bottom-cut boxes but estimate the foot from the box height (person height ~1.7 m) instead of dropping them.</td>
+</tr>
+<tr>
+<td>Many north-side tracks are seen by only one camera</td>
+<td>Cameras 1-6 (tilted 15 deg below horizon) see people at long range and from the side</td>
+<td>Cross-check poses of cameras 1-8 the same way as 9-12; consider a smaller <code>FUSE_D</code> growth with range.</td>
+</tr>
+<tr>
+<td>People vanish for a moment and may get a new ID</td>
+<td>Missed detections; lost tracks are not drawn; tracker deletes after 3 s</td>
+<td>Draw predicted positions in a dimmer colour; increase <code>MAX_MISS_S</code>; use appearance to re-link after deletion.</td>
+</tr>
+<tr>
+<td>ReID is only a tie-breaker</td>
+<td>Weight 0.5 relative to a normalised distance, embeddings blended slowly; simulated avatars may look alike</td>
+<td>Evaluate embedding quality on your data; raise the weight if people are visually distinct.</td>
+</tr>
+<tr>
+<td>Greedy fusion can merge close people</td>
+<td>Distance-only clustering</td>
+<td>Add an appearance term to the cluster distance, or use Hungarian between cameras.</td>
+</tr>
+<tr>
+<td>Fixed camera model</td>
+<td>No lens distortion, FOV assumed</td>
+<td>Get real intrinsics from Isaac Sim (<code>Camera</code> prim: focal length, horizontal aperture) and put them in <code>configs/camera_properties.txt</code> / <code>camera_defaults.json</code>.</td>
+</tr>
+<tr>
+<td>Speed on CPU</td>
+<td>12 videos at 1920x1080 and 960 px YOLO</td>
+<td>Use <code>--step 10</code>, <code>--imgsz 640</code>, fewer cameras, or a GPU.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="14-parameter-reference-configpy">14. Parameter reference (<code>config.py</code>)</h2>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Value</th>
+<th>Meaning</th>
+<th>Effect if increased</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>W, H</code></td>
+<td>1920, 1080</td>
+<td>Video size</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>HFOV</code></td>
+<td>60 deg</td>
+<td>Horizontal field of view (from 18.15 mm lens, 20.955 mm aperture)</td>
+<td>Places points farther/closer; a wrong value gives large errors at long range</td>
+</tr>
+<tr>
+<td><code>F</code></td>
+<td>1663 px</td>
+<td>Focal length in pixels (derived)</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>MAX_RANGE</code></td>
+<td>80 m</td>
+<td>Ignore ground hits farther than this</td>
+<td>More far (noisy) points are accepted</td>
+</tr>
+<tr>
+<td><code>XMIN..YMAX</code></td>
+<td>-26..5, -23..30</td>
+<td>Floor box = bounding box of all camera positions</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>PEOPLE</code></td>
+<td>10</td>
+<td>Max simultaneous tracks</td>
+<td>More ghost tracks possible</td>
+</tr>
+<tr>
+<td><code>FUSE_D</code></td>
+<td>0.8 m</td>
+<td>Cross-camera merge distance (+3 % of range)</td>
+<td>More merging, more false merges</td>
+</tr>
+<tr>
+<td><code>GATE</code></td>
+<td>1.5 m</td>
+<td>Track-to-detection association gate</td>
+<td>Follows fast motion, more ID swaps</td>
+</tr>
+<tr>
+<td><code>CONFIRM</code></td>
+<td>3</td>
+<td>Frames before a track is shown (or 2+ cameras)</td>
+<td>Fewer ghosts, slower start</td>
+</tr>
+<tr>
+<td><code>MAX_MISS_S</code></td>
+<td>3 s</td>
+<td>Delete a track after this long without detection</td>
+<td>IDs survive longer gaps, ghosts linger</td>
+</tr>
+</tbody>
+</table>
+<p>Other constants in code: YOLO confidence 0.35 (<code>detector.py</code>), crop size 128x256, Kalman process noise
+<code>diag(.05,.05,.5,.5)*dt</code> and measurement noise 0.3 (<code>tracker.py</code>), appearance weight 0.5, embedding blend 0.9/0.1,
+map scale 15 px/m, trail length 40 (<code>main.py</code>).</p>
+<hr />
+<h2 id="15-troubleshooting">15. Troubleshooting</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Likely cause / fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>People appear in the wrong part of the map</td>
+<td>Wrong camera pose or FOV. Run <code>--check</code>, then <code>--debug --cams &lt;few cameras&gt;</code> and compare grey dots between cameras.</td>
+</tr>
+<tr>
+<td>A camera shows nothing in the map</td>
+<td>All its boxes rejected: look at the red boxes in <code>debug_cams.mp4</code> and the per-camera counts.</td>
+</tr>
+<tr>
+<td>Fewer than 10 people visible</td>
+<td>People hidden/lost for a moment (section 10.2) or detection threshold too high; try <code>--imgsz 1280</code> or lower <code>conf</code> in <code>Detector</code>.</td>
+</tr>
+<tr>
+<td>More than 10 IDs in the summary</td>
+<td>Track deleted after 3 s and a new one created. Increase <code>MAX_MISS_S</code>.</td>
+</tr>
+<tr>
+<td>Very slow</td>
+<td>Use <code>--step 10</code>, <code>--cams</code> subset, or <code>--device cuda</code>.</td>
+</tr>
+<tr>
+<td><code>ModuleNotFoundError: config</code> when running a helper script from another folder</td>
+<td>Run from <code>~/study/mtmc</code> or set <code>PYTHONPATH=.</code>.</td>
+</tr>
+<tr>
+<td>Cannot open window</td>
+<td>No display; omit <code>--show</code>.</td>
+</tr>
+<tr>
+<td>First run tries to download <code>yolo11n.pt</code></td>
+<td>Needs internet access once (5 MB).</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="16-file-by-file-function-index">16. File-by-file function index</h2>
+<p><strong><code>config.py</code></strong> - constants plus <code>inside(xy, margin)</code> (boolean mask: inside the floor rectangle enlarged by <code>margin</code>)
+and <code>clamp(xy)</code> (project a point into the rectangle).</p>
+<p><strong><code>parse_camera_config.py</code></strong> - <code>parse_properties</code>, <code>build_cameras</code>, <code>quat_to_matrix</code>, <code>generate</code>, <code>main</code> (standalone CLI).</p>
+<p><strong><code>geometry.py</code></strong> - <code>Camera.__init__</code> (pose from <code>CAMERAS</code>), <code>Camera.ground</code>, <code>Camera.project</code>, <code>check</code>.</p>
+<p><strong><code>detector.py</code></strong> - <code>Detector.__init__</code>, <code>Detector.__call__</code>.</p>
+<p><strong><code>tracker.py</code></strong> - <code>fuse</code>, <code>Track.predict</code>, <code>Track.update</code>, <code>Track.xy</code>, <code>Tracker.step</code>.</p>
+<p><strong><code>main.py</code></strong> - argument parsing; camera id parser; <code>base_map</code>, <code>draw</code>; the processing loop; summary.</p>
+<p><strong><code>osnet.py</code></strong> - OSNet building blocks and the <code>osnet_x0_25</code> factory (unchanged third-party code).</p></main>
+</div></body></html>

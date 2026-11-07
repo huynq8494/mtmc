@@ -1,0 +1,18 @@
+{
+  "_comment": "Default camera properties (Isaac Sim / USD names). Used only for properties missing from camera_properties.txt.",
+  "clippingRange": [0.01, 10000000],
+  "exposure:fStop": 5.0,
+  "exposure:responsivity": 1.0,
+  "exposure:time": 0.02,
+  "focalLength": 18.14756202697754,
+  "focusDistance": 400.0,
+  "horizontalAperture": 20.955,
+  "verticalAperture": 15.2908,
+  "resolution": [1920, 1080],
+  "omni:kit:cameraLock": false,
+  "omni:kit:centerOfInterest": [0, 0, -400],
+  "projection": "perspective",
+  "xformOp:orient": [1, 0, 0, 0],
+  "xformOp:scale": [1, 1, 1],
+  "xformOp:translate": [0, 0, 0]
+}

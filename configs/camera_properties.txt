@@ -1,0 +1,176 @@
+
+=== CAMERA: /World/Cameras/sensor_max_coverage/Camera_01 ===
+clippingRange: (0.01, 10000000)
+exposure:fStop: 5.0
+exposure:responsivity: 1.1026709079742432
+exposure:time: 0.019999999552965164
+focalLength: 18.14756202697754
+focusDistance: 400.0
+omni:kit:cameraLock: True
+omni:kit:centerOfInterest: (0, 0, -17.70591639351952)
+projection: perspective
+xformOp:orient: (6.123234262925839e-17, -3.727588845307733e-17, 0.6087614297866821, 0.7933533191680908)
+xformOp:scale: (1, 1, 1)
+xformOp:translate: (-22.84000015258789, 30, 3)
+xformOpOrder: [xformOp:translate, xformOp:orient, xformOp:scale]
+
+=== CAMERA: /World/Cameras/sensor_max_coverage/Camera_02 ===
+clippingRange: (0.01, 10000000)
+exposure:fStop: 5.0
+exposure:responsivity: 1.1026709079742432
+exposure:time: 0.019999999552965164
+focalLength: 18.14756202697754
+focusDistance: 400.0
+omni:kit:cameraLock: True
+omni:kit:centerOfInterest: (0, 0, -400)
+projection: perspective
+xformOp:orient: (6.123234262925839e-17, -3.727588845307733e-17, 0.6087614297866821, 0.7933533191680908)
+xformOp:scale: (1, 1, 1)
+xformOp:translate: (-17.889999389648438, 30, 3)
+xformOpOrder: [xformOp:translate, xformOp:orient, xformOp:scale]
+
+=== CAMERA: /World/Cameras/sensor_max_coverage/Camera_03 ===
+clippingRange: (0.01, 10000000)
+exposure:fStop: 5.0
+exposure:responsivity: 1.1026709079742432
+exposure:time: 0.019999999552965164
+focalLength: 18.14756202697754
+focusDistance: 400.0
+omni:kit:cameraLock: True
+projection: perspective
+xformOp:orient: (6.123234262925839e-17, -3.727588845307733e-17, 0.6087614297866821, 0.7933533191680908)
+xformOp:scale: (1, 1, 1)
+xformOp:translate: (-12.9399995803833, 30, 3)
+xformOpOrder: [xformOp:translate, xformOp:orient, xformOp:scale]
+
+=== CAMERA: /World/Cameras/sensor_max_coverage/Camera_04 ===
+clippingRange: (0.01, 10000000)
+exposure:fStop: 5.0
+exposure:responsivity: 1.1026709079742432
+exposure:time: 0.019999999552965164
+focalLength: 18.14756202697754
+focusDistance: 400.0
+omni:kit:cameraLock: True
+projection: perspective
+xformOp:orient: (6.123234262925839e-17, -3.727588845307733e-17, 0.6087614297866821, 0.7933533191680908)
+xformOp:scale: (1, 1, 1)
+xformOp:translate: (-7.980000019073486, 30, 3)
+xformOpOrder: [xformOp:translate, xformOp:orient, xformOp:scale]
+
+=== CAMERA: /World/Cameras/sensor_max_coverage/Camera_05 ===
+clippingRange: (0.01, 10000000)
+exposure:fStop: 5.0
+exposure:responsivity: 1.1026709079742432
+exposure:time: 0.019999999552965164
+focalLength: 18.14756202697754
+focusDistance: 400.0
+omni:kit:cameraLock: True
+projection: perspective
+xformOp:orient: (6.123234262925839e-17, -3.727588845307733e-17, 0.6087614297866821, 0.7933533191680908)
+xformOp:scale: (1, 1, 1)
+xformOp:translate: (-3.0199999809265137, 30, 3)
+xformOpOrder: [xformOp:translate, xformOp:orient, xformOp:scale]
+
+=== CAMERA: /World/Cameras/sensor_max_coverage/Camera_06 ===
+clippingRange: (0.01, 10000000)
+exposure:fStop: 5.0
+exposure:responsivity: 1.1026709079742432
+exposure:time: 0.019999999552965164
+focalLength: 18.14756202697754
+focusDistance: 400.0
+omni:kit:cameraLock: True
+projection: perspective
+xformOp:orient: (6.123234262925839e-17, -3.727588845307733e-17, 0.6087614297866821, 0.7933533191680908)
+xformOp:scale: (1, 1, 1)
+xformOp:translate: (1.940000057220459, 30, 3)
+xformOpOrder: [xformOp:translate, xformOp:orient, xformOp:scale]
+
+=== CAMERA: /World/Cameras/sensor_max_coverage/Camera_07 ===
+clippingRange: (0.01, 10000000)
+exposure:fStop: 5.0
+exposure:responsivity: 1.1026709079742432
+exposure:time: 0.019999999552965164
+focalLength: 18.14756202697754
+focusDistance: 400.0
+omni:kit:cameraLock: True
+omni:kit:centerOfInterest: (0, 0, -400)
+projection: perspective
+xformOp:orient: (0.43045932054519653, 0.4304593503475189, 0.5609855055809021, 0.5609855055809021)
+xformOp:scale: (1, 1, 1)
+xformOp:translate: (5, 30, 3)
+xformOpOrder: [xformOp:translate, xformOp:orient, xformOp:scale]
+
+=== CAMERA: /World/Cameras/sensor_max_coverage/Camera_08 ===
+clippingRange: (0.01, 10000000)
+exposure:fStop: 5.0
+exposure:responsivity: 1.1026709079742432
+exposure:time: 0.019999999552965164
+focalLength: 18.14756202697754
+focusDistance: 400.0
+omni:kit:cameraLock: True
+omni:kit:centerOfInterest: (0, 0, -400)
+projection: perspective
+xformOp:orient: (-0.43045932054519653, -0.4304593503475189, 0.5609855055809021, 0.5609855055809021)
+xformOp:scale: (1, 1, 1)
+xformOp:translate: (-26, 30, 3)
+xformOpOrder: [xformOp:translate, xformOp:orient, xformOp:scale]
+
+=== CAMERA: /World/Cameras/sensor_max_coverage/Camera_09 ===
+clippingRange: (0.01, 10000000)
+exposure:fStop: 5.0
+exposure:responsivity: 1.1026709079742432
+exposure:time: 0.019999999552965164
+focalLength: 18.14756202697754
+focusDistance: 400.0
+omni:kit:cameraLock: True
+omni:kit:centerOfInterest: (0, 0, -400)
+projection: perspective
+xformOp:orient: (-0.27059805393218994, -0.27059805393218994, 0.6532815098762512, 0.6532815098762512)
+xformOp:scale: (1, 1, 1)
+xformOp:translate: (-26, 8.5, 3)
+xformOpOrder: [xformOp:translate, xformOp:orient, xformOp:scale]
+
+=== CAMERA: /World/Cameras/sensor_max_coverage/Camera_10 ===
+clippingRange: (0.01, 10000000)
+exposure:fStop: 5.0
+exposure:responsivity: 1.1026709079742432
+exposure:time: 0.019999999552965164
+focalLength: 18.14756202697754
+focusDistance: 400.0
+omni:kit:cameraLock: True
+omni:kit:centerOfInterest: (0, 0, -400)
+projection: perspective
+xformOp:orient: (0.6532815098762512, 0.6532814502716064, -0.27059802412986755, -0.27059802412986755)
+xformOp:scale: (1, 1, 1)
+xformOp:translate: (-26, -23, 3)
+xformOpOrder: [xformOp:translate, xformOp:orient, xformOp:scale]
+
+=== CAMERA: /World/Cameras/sensor_max_coverage/Camera_11 ===
+clippingRange: (0.01, 10000000)
+exposure:fStop: 5.0
+exposure:responsivity: 1.1026709079742432
+exposure:time: 0.019999999552965164
+focalLength: 18.14756202697754
+focusDistance: 400.0
+omni:kit:cameraLock: True
+omni:kit:centerOfInterest: (0, 0, -400)
+projection: perspective
+xformOp:orient: (0.6532815098762512, 0.6532814502716064, 0.27059802412986755, 0.27059802412986755)
+xformOp:scale: (1, 1, 1)
+xformOp:translate: (5, -23, 3)
+xformOpOrder: [xformOp:translate, xformOp:orient, xformOp:scale]
+
+=== CAMERA: /World/Cameras/sensor_max_coverage/Camera_12 ===
+clippingRange: (0.01, 10000000)
+exposure:fStop: 5.0
+exposure:responsivity: 1.1026709079742432
+exposure:time: 0.019999999552965164
+focalLength: 18.14756202697754
+focusDistance: 400.0
+omni:kit:cameraLock: True
+omni:kit:centerOfInterest: (0, 0, -400)
+projection: perspective
+xformOp:orient: (0.27059805393218994, 0.27059805393218994, 0.6532815098762512, 0.6532815098762512)
+xformOp:scale: (1, 1, 1)
+xformOp:translate: (5, 8.5, 3)
+xformOpOrder: [xformOp:translate, xformOp:orient, xformOp:scale]

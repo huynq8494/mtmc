@@ -1,0 +1,8 @@
+# Board (OrangePi 5 Pro, aarch64, Ubuntu/Debian). No torch needed.
+numpy
+scipy
+opencv-python-headless      # or: sudo apt install python3-opencv
+# rknn-toolkit-lite2: install the wheel matching your python version from
+#   https://github.com/airockchip/rknn-toolkit2/tree/master/rknn-toolkit-lite2/packages
+#   pip install rknn_toolkit_lite2-<ver>-cp3X-cp3X-manylinux_2_17_aarch64.manylinux2014_aarch64.whl
+# The board also needs librknnrt.so (rknpu2 runtime), e.g. /usr/lib/librknnrt.so

@@ -1,6 +1,4 @@
-We have a short sprint, so the goal should not be a production warehouse system. A strong outcome is a working prototype using two recorded camera videos, with local tracking IDs, basic cross-camera matching, positions on a 2D floor map, and visible movement trails.
-
-1. Understand the system you are building
+### Understand the system you are building
 
 The eventual pipeline will look like this:
 
@@ -24,72 +22,76 @@ Global position fusion
 
 Keep these three identity concepts separate:
 
-Detection: “There is a person in this frame.”
-Single-camera tracking: “This is track 7 in camera 1.”
-Cross-camera Re-ID: “Camera 1 track 7 and camera 2 track 12 are probably the same person.”
-Global ID: “Both tracks belong to warehouse person ID 3.”
+* Detection: “There is a person in this frame.”
+* Single-camera tracking: “This is track 7 in camera 1.”
+* Cross-camera Re-ID: “Camera 1 track 7 and camera 2 track 12 are probably the same person.”
+* Global ID: “Both tracks belong to warehouse person ID 3.”
 
 A practical multi-camera system must handle occlusion, perspective changes, illumination changes and open-set identities, meaning people may enter without already existing in a fixed gallery. Multi-Camera Industrial Open-Set Person Re-Identification and Tracking discusses these industrial and open-set constraints directly.
 
-Roadmap: today through Saturday
-Tonight, Tuesday: preparation, 30–45 minutes
-Objective
+# Roadmap
+
+## Tuesday: preparation, 30–45 minutes
+
+### Objective
 
 Prepare your environment and collect suitable test material.
 
-Tasks
-Create the project structure:
+### Tasks
 
-```
-warehouse-reid/
-├── videos/
-│   ├── camera_01.mp4
-│   └── camera_02.mp4
-├── maps/
-│   └── warehouse_map.png
-├── calibration/
-├── outputs/
-├── src/
-│   ├── detect_track.py
-│   ├── reid.py
-│   ├── calibration.py
-│   ├── global_tracker.py
-│   └── visualize_map.py
-└── requirements.txt
-```
+1. Create the project structure:
 
-Prepare two videos:
+   ```
+   warehouse-reid/
+   ├── videos/
+   │   ├── camera_01.mp4
+   │   └── camera_02.mp4
+   ├── maps/
+   │   └── warehouse_map.png
+   ├── calibration/
+   ├── outputs/
+   ├── src/
+   │   ├── detect_track.py
+   │   ├── reid.py
+   │   ├── calibration.py
+   │   ├── global_tracker.py
+   │   └── visualize_map.py
+   └── requirements.txt
+   ```
 
-Prefer synchronized recordings.
-Include at least two people.
-Make sure one person appears in both cameras.
-Begin with short clips, around one or two minutes.
-Fixed cameras are much easier than moving cameras.
+2. Prepare two videos:
 
-Create a simple warehouse map:
+   * Prefer synchronized recordings.
+   * Include at least two people.
+   * Make sure one person appears in both cameras.
+   * Begin with short clips, around one or two minutes.
+   * Fixed cameras are much easier than moving cameras.
 
-It can be a screenshot, floor plan or hand-drawn rectangle.
-Mark walls, doors and camera positions.
-Exact scale is not required for the first prototype.
+3. Create a simple warehouse map:
 
-Set up a Python environment:
+   * It can be a screenshot, floor plan or hand-drawn rectangle.
+   * Mark walls, doors and camera positions.
+   * Exact scale is not required for the first prototype.
 
-```Python
-python -m venv .venv
-source .venv/bin/activate
-```
+4. Set up a Python environment:
 
-On Windows:
+    ```Python
+    python -m venv .venv
+    source .venv/bin/activate
+    ```
 
-```PowerShell
-.venv\Scripts\activate
-```
+5. On Windows:
 
-Tonight’s deliverable
-Project folder created
-Two videos available
-Basic 2D map image available
-Python environment working
+    ```PowerShell
+    .venv\Scripts\activate
+    ```
+
+### Tonight’s deliverable
+
+* Project folder created
+* Two videos available
+* Basic 2D map image available
+* Python environment working
 
 ## Wednesday: detection and single-camera tracking
 
